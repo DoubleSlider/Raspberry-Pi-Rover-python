@@ -1,52 +1,68 @@
- #include <Servo.h>
-
+/*
+   By: Nick Poole
+  SparkFun Electronics
+  Date: 5
+  License: CC-BY SA 3.0 - Creative commons share-alike 3.0
+  use this code however you'd like, just keep this license and
+  attribute. Let me know if you make hugely, awesome, great changes.
+*/
+#include <Servo.h>
 // recieve radio
+const int ch1 = 2; // Here's where we'll keep our channel values
+const int ch2 = 3;
 
+// motor pin
+const int servo_pin = 4;
+const int ESC_pin = 5;
 Servo myServo;  // create servo object to control a servo
 Servo myESC;  // create servo object to control a servo
 
-
-
-
-void serialEvent();
 long ultrasonic_ranger(int pingPin);
 long microsecondsToCentimeters(long microseconds);
 long microsecondsToInches(long microseconds);
+void show_channel();
 
+void serialEvent();
 
 String inputString = "";         // a string to hold incoming data
 boolean stringComplete = false;  // whether the string is complete
 
 int posX = 0;
 
-
-const int pingPin_1 = 3;
-const int pingPin_2 = 4;
+// ultrasonic
+const int pingPin_1 = 8;
+const int pingPin_2 = 9;
 
 int cm1 = 200;
 int cm2 = 200;
-
+int ch1_pulse_width = 0;
+int ch2_pulse_width = 0;
 void setup() {
-  delay(200);  
+  delay(200);
   // initialize serial:
+
+  pinMode(ch1, INPUT); // Set our input pins as such
+  pinMode(ch2, INPUT);
+
   Serial.begin(57600);
   // reserve 100 bytes for the inputString:
   inputString.reserve(100);
 
- myServo.attach(6);  // attaches the servo on pin 6 to the servo object
-  myESC.attach(9);  // attaches the ESC on pin 9 to the servo object
+  myServo.attach(servo_pin);  // attaches the servo on pin 6 to the servo object
+  myESC.attach(ESC_pin);  // attaches the ESC on pin 9 to the servo object
   myServo.write(90); // start at 90 degree
-
-// arming
-  for(int i=0;i++;i<20){
-    myESC.writeMicroseconds(950);  // set servo to mid-point
-  }
-  delay(2000);// 115 or 120 //65
-  
 }
 
 
 void loop() {
+  ch1_pulse_width = pulseIn(2, HIGH, 25000); // Read the pulse width of
+  ch2_pulse_width = pulseIn(3, HIGH, 25000); // each channel
+  myServo.writeMicroseconds(ch1_pulse_width);
+  myESC.writeMicroseconds(ch2_pulse_width);
+  
+  // print RC signal
+  show_channel();
+
   serialEvent(); //call the function
   // print the string when a newline arrives:
   if (stringComplete) {
@@ -59,21 +75,27 @@ void loop() {
   cm1 = (int)ultrasonic_ranger(pingPin_1);
   cm2 = (int)ultrasonic_ranger(pingPin_2);
   Serial.print("P1:");
-   Serial.print(cm1);
-     Serial.print("P2:");
-   Serial.println(cm2);
+  Serial.print(cm1);
+  Serial.print("P2:");
+  Serial.println(cm2);
 
   delay(10);
 }
+void show_channel() {
+  Serial.print("Channel 1:"); // Print the value of
+  Serial.println(ch1_pulse_width);        // each channel
 
+  Serial.print("Channel 2:");
+  Serial.println(ch2_pulse_width);
+}
 /*
   SerialEvent occurs whenever a new data comes in the
- hardware serial RX.  This routine is run between each
- time loop() runs, so using delay inside loop can delay
- response.  Multiple bytes of data may be available.
- */
+  hardware serial RX.  This routine is run between each
+  time loop() runs, so using delay inside loop can delay
+  response.  Multiple bytes of data may be available.
+*/
 void serialEvent() {
-  while (Serial.available()) {
+  /*while (Serial.available()) {
     // get the new byte:
     char inChar = (char)Serial.read();
     // add it to the inputString:
@@ -81,40 +103,37 @@ void serialEvent() {
     // if the incoming character is afire; newline, set a flag
     // so the main loop can do something about it:
     if (inChar == ';') {
-      Serial.print("I recieve: "+inputString);
-     int a = inputString.indexOf('S');    
+      Serial.print("I recieve: " + inputString);
+      int a = inputString.indexOf('S');
       int b = inputString.indexOf('E');
       int c = inputString.indexOf(';');
-      if( b > a ){
-        auto x_num_string = inputString.substring(a+1,b);
-        auto y_num_string = inputString.substring(b+1,c);
-        
+      if ( b > a ) {
+        auto x_num_string = inputString.substring(a + 1, b);
+        auto y_num_string = inputString.substring(b + 1, c);
+
         int posX =  x_num_string.toInt();
         int posY =  y_num_string.toInt();
         const int ss = 165;
 
-           if( cm1 < 60 && posY > 1640){
-            posY = 1640;
-            }
-            if( cm2 < 60 && posY < 1500-ss){
-              posY=1500-ss;
-            }
-       /* Serial.print("I recieve: S=");
-        Serial.print(posX);
-         Serial.print(",E=");
-         Serial.println(posY);*/
-          myServo.write(posX);   
-           myESC.write(posY);  
+        if ( cm1 < 60 && posY > 1640) {
+          posY = 1640;
+        }
+        if ( cm2 < 60 && posY < 1500 - ss) {
+          posY = 1500 - ss;
+        }
+
+        myServo.write(posX);
+        myESC.write(posY);
       } else {
-        
+
       }
       stringComplete = true;
     }
-  }
+    }*/
 }
 
 
-long ultrasonic_ranger(int pingPin){
+long ultrasonic_ranger(int pingPin) {
   // establish variables for duration of the ping,
   // and the distance result in inches and centimeters:
   unsigned long timeout = 15000; // us
@@ -134,7 +153,7 @@ long ultrasonic_ranger(int pingPin){
   // of the ping to the reception of its echo off of an object.
   pinMode(pingPin, INPUT);
   duration = pulseIn(pingPin, HIGH, timeout);
-  if(duration==0){
+  if (duration == 0) {
     duration = timeout;
   }
 
